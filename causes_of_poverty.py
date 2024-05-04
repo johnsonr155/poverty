@@ -37,7 +37,7 @@ def relevant_metrics_data(df):
     df.rename(columns=shortened_metric, inplace=True)
     return(df)
 
-def filter_in_window_of_interest(df, gdp_range=[750, 2000]):
+def filter_in_window_of_interest(df, gdp_range=[0, 200000]):
     df = df[(df['GDP per capita (current US$)'] > gdp_range[0]) & (df['GDP per capita (current US$)'] < gdp_range[1])]
     return(df)
 

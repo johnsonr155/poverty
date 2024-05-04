@@ -15,6 +15,7 @@ EXLCUDED_REGIONS = [
     "Fragile and conflict affected situations",
     "Heavily indebted poor countries (HIPC)",
     "IBRD only",
+    "IDA only",
     "IDA & IBRD total",
     "IDA total",
     "IDA blend",
@@ -41,7 +42,7 @@ EXLCUDED_REGIONS = [
     "World",
     "High income",
     "Low income",
-    "Lower middle income"
+    "Lower middle income",
     "Upper middle income",
     "Not classified"] 
 
