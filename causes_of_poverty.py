@@ -41,8 +41,10 @@ def filter_in_window_of_interest(df, gdp_range=[750, 2000]):
     df = df[(df['GDP per capita (current US$)'] > gdp_range[0]) & (df['GDP per capita (current US$)'] < gdp_range[1])]
     return(df)
 
+def percent_formatter(x, pos):
+    return f"{x:.0f}%"
 
-def analyze_poverty_relationship_and_plot(df, dependent_var='poverty'):
+def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 0.2):
     # Replace infinities with NaN
     df = df.replace([np.inf, -np.inf], np.nan)
     
@@ -56,38 +58,41 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty'):
         # Prepare the data by dropping NaNs only in relevant columns
         subset = df[[predictor, dependent_var]].dropna()
 
-        # Normalize the predictor and dependent variable
-        subset[predictor] = (subset[predictor] - subset[predictor].mean()) / subset[predictor].std()
-        subset[dependent_var] = (subset[dependent_var] - subset[dependent_var].mean()) / subset[dependent_var].std()
+        # Normalize the predictor and dependent variable for the regression model
+        norm_predictor = (subset[predictor] - subset[predictor].mean()) / subset[predictor].std()
+        norm_dependent_var = (subset[dependent_var] - subset[dependent_var].mean()) / subset[dependent_var].std()
         
-        # Convert DataFrame to NumPy array for statsmodels and plotting
-        X_np = subset[[predictor]].to_numpy()
-        y_np = subset[dependent_var].to_numpy()
+        # Convert to numpy arrays for regression
+        X = sm.add_constant(norm_predictor.values.reshape(-1, 1))  # Adding constant for intercept
+        y = norm_dependent_var.values
         
-        # Add a constant to the independent variables for intercept
-        X_np_with_const = sm.add_constant(X_np)
-        
-        # Fit the model
-        model = sm.OLS(y_np, X_np_with_const).fit()
+        # Fit the regression model
+        model = sm.OLS(y, X).fit()
         
         # Store results
-        coef = model.params[1]  # Get coefficient for the predictor
+        coef = model.params[1]  # Coefficient for the predictor
         r_squared = model.rsquared
         results.append({
             'Predictor': predictor,
             'Coefficient': coef,
             'R-squared': r_squared,
-            'P-Value': model.pvalues[1]  # p-value for the predictor
+            'P-Value': model.pvalues[1]
         })
 
-        # Plot if R-squared > 0.3
-        if r_squared > 0.3:
+        # Plot if R-squared > 0.3 using actual values
+        if r_squared > min_r2:
+            # Actual data for plotting
+            actual_x = subset[predictor].values
+            actual_y = subset[dependent_var].values
+            predicted_y = subset[dependent_var].mean() + model.predict(X) * subset[dependent_var].std()
+
             plt.figure(figsize=(10, 6))
-            plt.scatter(X_np, y_np, color='blue', label='Data Points')
-            plt.plot(X_np, model.predict(X_np_with_const), color='red', label=f'Regression Line\nR²={r_squared:.2f}')
-            plt.title(f'Relationship between {predictor} and {dependent_var}\nCoefficient: {coef:.2f}')
-            plt.xlabel(f'Normalized {predictor}')
-            plt.ylabel(f'Normalized {dependent_var}')
+            plt.scatter(actual_x, actual_y, color='#008080', label='Countries in corridor (1990-)')
+            plt.plot(actual_x, predicted_y, color='#836953', label=f'Regression Line\nR²={r_squared:.2f}')
+            plt.title(f'Relationship between {predictor} and {dependent_var}')
+            plt.xlabel(f'{predictor}')
+            plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
+            plt.ylabel(f'{dependent_var}')
             plt.legend()
             plt.grid(True)
             plt.show()
@@ -97,13 +102,12 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty'):
     return results_df
 
 
-
 df_renamed = rename_raw_data()
 df_simplified = relevant_metrics_data(df_renamed)
 max_year_poverty_by_country = max_recent_yr(df_simplified)
 in_range_countries = filter_in_window_of_interest(df_simplified)
 
 regression_table = analyze_poverty_relationship_and_plot(in_range_countries)
-regression_table = regression_table[regression_table["R-squared"] > 0.3]
+regression_table = regression_table[regression_table["R-squared"] > 0.2]
 
 print(regression_table)
