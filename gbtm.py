@@ -1,12 +1,15 @@
 import pandas as pd
-
-import pandas as pd
 import numpy as np
+from sklearn.mixture import GaussianMixture
+from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.ticker import FuncFormatter
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.patches as mpatches
 
 from process_data import rename_raw_data, max_recent_yr
 
@@ -50,6 +53,7 @@ def plot_trajectories(df, countries = CHOSEN_COUNTRIES):
     
     df['years_passed'] = df.apply(lambda row: row['date'] - country_year0_map[row['country']], axis=1)
     print(df)
+    print(len(df["country"].unique()))
 
     # Plot line chart for each country
     plt.figure(figsize=(10, 6))
@@ -71,5 +75,64 @@ def plot_trajectories(df, countries = CHOSEN_COUNTRIES):
     # Show plot
     plt.grid(True)
     plt.show()
+    return(df)
 
-plot_trajectories(df_renamed)
+df_trajectories = plot_trajectories(df_renamed)
+print(df_trajectories)
+
+def gbtm(df):
+    df = df[df["years_passed"]>-1]
+    pivot_data = df.pivot(index='country', columns='years_passed', values='poverty')
+
+    # Replace any possible NaN values with the mean of the column (optional based on your data)
+    pivot_data = pivot_data.fillna(method='ffill', axis=1)
+
+    # Scaling the data
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(pivot_data)
+
+    # Fit a Gaussian Mixture Model
+    n_components = 3  # The number of trajectories you hypothesize
+    gmm = GaussianMixture(n_components=n_components, random_state=0)
+    gmm.fit(scaled_data)
+
+    # Predict the cluster for each country
+    clusters = gmm.predict(scaled_data)
+
+    # Add the cluster labels to the DataFrame
+    pivot_data['Cluster'] = clusters
+
+    print(pivot_data)
+    original_data = scaler.inverse_transform(scaled_data)
+    original_data_df = pd.DataFrame(original_data, index=pivot_data.index, columns=pivot_data.columns[:-1])
+
+    # Add cluster information back to the DataFrame with original data
+    original_data_df['Cluster'] = clusters
+    palette = ["#008080", "#6C22A6", "#CC7722"]
+    # Set up the plot
+    plt.figure(figsize=(10, 6))
+    
+    # Plot each country's poverty trajectory
+    for _, row in original_data_df.iterrows():
+        plt.plot(row.index[:-1].values, row.values[:-1], color=palette[int(row["Cluster"])])
+        plt.plot(row.index[:-1].values, row.values[:-1], linewidth=40, color=palette[int(row["Cluster"])], alpha=0.2, label='_nolegend_')
+
+
+    # Enhance the plot
+    plt.title('Poverty Trajectories by Country Cluster')
+    plt.xlabel('Years Passed')
+    plt.ylabel('Poverty Level')
+    plt.legend(title='Cluster', bbox_to_anchor=(1.05, 1), loc='upper left')
+    sns.despine()
+    patch1 = mpatches.Patch(color='#6C22A6', label='Stuck in a rut')
+    patch2 = mpatches.Patch(color='#008080', label='On the right track')
+    patch3 = mpatches.Patch(color='#CC7722', label='Rags to riches')
+
+    plt.legend(handles=[patch1, patch2, patch3])
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
+    return(pivot_data)
+
+df_test = gbtm(df_trajectories)
+print(df_test)
