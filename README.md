@@ -18,6 +18,6 @@ This repo  explores factors contributing to poverty across various countries. It
 Clone the repository and install the necessary Python packages:
 
 ```bash
-git clone https://github.com/yourusername/poverty-analysis-toolkit.git
-cd poverty-analysis-toolkit
+git clone https://github.com/johnsonr155/poverty.git
+cd poverty
 pip install -r requirements.txt
