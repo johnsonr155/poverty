@@ -8,6 +8,8 @@ import matplotlib as mpl
 
 from process_data import rename_raw_data, max_recent_yr
 
+GDP_RANGE = [750, 2000]
+
 VARS_OF_INTEREST = [
     "Foreign direct investment, net inflows (BoP, current US$)",
     "Net official development assistance received (current US$)",
@@ -37,7 +39,7 @@ def relevant_metrics_data(df):
     df.rename(columns=shortened_metric, inplace=True)
     return(df)
 
-def filter_in_window_of_interest(df, gdp_range=[0, 200000]):
+def filter_in_window_of_interest(df, gdp_range=GDP_RANGE):
     df = df[(df['GDP per capita (current US$)'] > gdp_range[0]) & (df['GDP per capita (current US$)'] < gdp_range[1])]
     return(df)
 
@@ -48,11 +50,10 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 
     # Replace infinities with NaN
     df = df.replace([np.inf, -np.inf], np.nan)
     
-    # Identifying predictors excluding 'country' and dependent variable
+    # Specifying predictors excluding 'country' and dependent variable
     predictors = [col for col in df.columns if col not in ['country', dependent_var]]
     
     results = []
-    
     # Perform regression for each predictor
     for predictor in predictors:
         # Prepare the data by dropping NaNs only in relevant columns
@@ -70,7 +71,7 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 
         model = sm.OLS(y, X).fit()
         
         # Store results
-        coef = model.params[1]  # Coefficient for the predictor
+        coef = model.params[1] 
         r_squared = model.rsquared
         results.append({
             'Predictor': predictor,

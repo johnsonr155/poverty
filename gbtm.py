@@ -4,21 +4,25 @@ from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 from matplotlib.ticker import FuncFormatter
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.patches as mpatches
 
-from process_data import rename_raw_data, max_recent_yr
+from process_data import rename_raw_data
 
-def countries_of_interest(df, gdp_range = [500, 2000], poverty_range=[20, 30], max_start_yr=2005):
-    """We only want to look at countries whose poverty and gdp per capita in the 90s are in our range on interst"""
+GDP_RANGE = [500, 2000]
+POVERTY_STARTING_POINT_RANGE=[20, 30]
+
+def countries_of_interest(df, gdp_range = GDP_RANGE, poverty_range=POVERTY_STARTING_POINT_RANGE, max_start_yr=2005):
+    """function to find countries whose poverty and gdp per capita are in our range on interest and which have a long enough subsequent trajectory"""
+    # rename poverty metric as poverty for simplicity
     shortened_metric = {
         "Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)":"poverty"
     }
     df.rename(columns=shortened_metric, inplace=True)
+    # select countries that pass through the chosen range
     df = df[
         (df['GDP per capita (current US$)'] > gdp_range[0]) &
         (df['GDP per capita (current US$)'] < gdp_range[1]) &
@@ -28,63 +32,53 @@ def countries_of_interest(df, gdp_range = [500, 2000], poverty_range=[20, 30], m
         ]
     return(df["country"].unique())
 
-df_renamed = rename_raw_data()
-CHOSEN_COUNTRIES = countries_of_interest(df_renamed)
+def percent_formatter(x, pos):
+    return f"{x:.0f}%"
 
-#df_simplified = relevant_metrics_data(df_renamed)
-#max_year_poverty_by_country = max_recent_yr(df_simplified)
-#in_range_countries = filter_in_window_of_interest(df_simplified)
-
-def plot_trajectories(df, countries = CHOSEN_COUNTRIES):
-    # Filter the DataFrame to include only the chosen country names
+def plot_trajectories(df, countries, starting_poverty_level = 25):
+    # Filter to include only the chosen countries
     df = df[df['country'].isin(countries)]
     df = df[["date", "country", "poverty"]]
 
-    df['poverty_difference'] = abs(df['poverty'] - 25)
+    # find year when trajectory passes closest to the chosen poverty level
+    df['poverty_difference'] = abs(df['poverty'] - starting_poverty_level)
     df.dropna(subset=['country', 'date', "poverty_difference"], inplace=True)
     # Find the year with the minimum absolute difference for each country
     min_poverty_indices = df.groupby('country')['poverty_difference'].idxmin()
-
     min_years = df.loc[min_poverty_indices, ['country', 'date']]
 
     # Create dictionary to map each country to its corresponding 'year 0'
     country_year0_map = dict(zip(min_years['country'], min_years['date']))
     # Calculate 'years_passed' column based on the difference between the current year and 'year 0' for each country
-    
     df['years_passed'] = df.apply(lambda row: row['date'] - country_year0_map[row['country']], axis=1)
-    print(df)
-    print(len(df["country"].unique()))
 
-    # Plot line chart for each country
+    # Plot line chart showing trajectories 
     plt.figure(figsize=(10, 6))
     for country in df.country.unique():
         data = df[df["country"]==country]
         plt.plot(data['years_passed'].values, data['poverty'].values, color='#008080')
 
-    # Set labels and title
+    # gray area showing years prior to year 0
     plt.axvspan(-5, 0, color='gray', alpha=0.3)
 
-    plt.xlabel('years_passed')
+    plt.xlabel('Years Passed')
     plt.ylabel('Poverty')
     plt.title('Poverty Over Time for Chosen Countries')
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
     plt.xlim(-5, 30)
     plt.ylim(0, 40)
-    # Add legend
     plt.legend()
 
-    # Show plot
     plt.grid(True)
     plt.show()
     return(df)
 
-df_trajectories = plot_trajectories(df_renamed)
-print(df_trajectories)
 
 def gbtm(df):
-    df = df[df["years_passed"]>-1]
+    df = df[df["years_passed"]>=0]
     pivot_data = df.pivot(index='country', columns='years_passed', values='poverty')
 
-    # Replace any possible NaN values with the mean of the column (optional based on your data)
+    # Replace NaN values with the subsequent value
     pivot_data = pivot_data.fillna(method='ffill', axis=1)
 
     # Scaling the data
@@ -92,8 +86,9 @@ def gbtm(df):
     scaled_data = scaler.fit_transform(pivot_data)
 
     # Fit a Gaussian Mixture Model
-    n_components = 3  # The number of trajectories you hypothesize
-    gmm = GaussianMixture(n_components=n_components, random_state=0)
+    # The number of trajectories you hypothesize
+    n_clusters = 3  
+    gmm = GaussianMixture(n_components=n_clusters, random_state=0)
     gmm.fit(scaled_data)
 
     # Predict the cluster for each country
@@ -102,7 +97,6 @@ def gbtm(df):
     # Add the cluster labels to the DataFrame
     pivot_data['Cluster'] = clusters
 
-    print(pivot_data)
     original_data = scaler.inverse_transform(scaled_data)
     original_data_df = pd.DataFrame(original_data, index=pivot_data.index, columns=pivot_data.columns[:-1])
 
@@ -119,14 +113,15 @@ def gbtm(df):
 
 
     # Enhance the plot
-    plt.title('Poverty Trajectories by Country Cluster')
+    plt.title('Poverty Reduction Trajectories')
     plt.xlabel('Years Passed')
     plt.ylabel('Poverty Level')
     plt.legend(title='Cluster', bbox_to_anchor=(1.05, 1), loc='upper left')
     sns.despine()
     patch1 = mpatches.Patch(color='#6C22A6', label='Stuck in a rut')
-    patch2 = mpatches.Patch(color='#008080', label='On the right track')
-    patch3 = mpatches.Patch(color='#CC7722', label='Rags to riches')
+    patch2 = mpatches.Patch(color='#008080', label='Slow and steady')
+    patch3 = mpatches.Patch(color='#CC7722', label='Top of the class')
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
 
     plt.legend(handles=[patch1, patch2, patch3])
     # Show the plot
@@ -134,5 +129,10 @@ def gbtm(df):
     plt.show()
     return(pivot_data)
 
+
+df_renamed = rename_raw_data()
+chosen_countries = countries_of_interest(df_renamed)
+
+df_trajectories = plot_trajectories(df_renamed, countries=chosen_countries)
+
 df_test = gbtm(df_trajectories)
-print(df_test)
