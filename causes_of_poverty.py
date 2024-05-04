@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+from matplotlib.ticker import FuncFormatter
+import matplotlib as mpl
 
 from process_data import rename_raw_data, max_recent_yr
 
@@ -37,9 +41,9 @@ def filter_in_window_of_interest(df, gdp_range=[750, 2000]):
     df = df[(df['GDP per capita (current US$)'] > gdp_range[0]) & (df['GDP per capita (current US$)'] < gdp_range[1])]
     return(df)
 
- 
-def analyze_poverty_relationship(df, dependent_var='poverty'):
-    # Normalize the data first (if there are any infinities, replace them with NaN first)
+
+def analyze_poverty_relationship_and_plot(df, dependent_var='poverty'):
+    # Replace infinities with NaN
     df = df.replace([np.inf, -np.inf], np.nan)
     
     # Identifying predictors excluding 'country' and dependent variable
@@ -56,25 +60,41 @@ def analyze_poverty_relationship(df, dependent_var='poverty'):
         subset[predictor] = (subset[predictor] - subset[predictor].mean()) / subset[predictor].std()
         subset[dependent_var] = (subset[dependent_var] - subset[dependent_var].mean()) / subset[dependent_var].std()
         
-        # Adding a constant for regression intercept
-        X = sm.add_constant(subset[[predictor]])
-        y = subset[dependent_var]
+        # Convert DataFrame to NumPy array for statsmodels and plotting
+        X_np = subset[[predictor]].to_numpy()
+        y_np = subset[dependent_var].to_numpy()
+        
+        # Add a constant to the independent variables for intercept
+        X_np_with_const = sm.add_constant(X_np)
         
         # Fit the model
-        model = sm.OLS(y, X).fit()
+        model = sm.OLS(y_np, X_np_with_const).fit()
         
         # Store results
+        coef = model.params[1]  # Get coefficient for the predictor
+        r_squared = model.rsquared
         results.append({
             'Predictor': predictor,
-            'Coefficient': model.params[predictor],
-            'R-squared': model.rsquared,
-            'P-Value': model.pvalues[predictor]
+            'Coefficient': coef,
+            'R-squared': r_squared,
+            'P-Value': model.pvalues[1]  # p-value for the predictor
         })
+
+        # Plot if R-squared > 0.3
+        if r_squared > 0.3:
+            plt.figure(figsize=(10, 6))
+            plt.scatter(X_np, y_np, color='blue', label='Data Points')
+            plt.plot(X_np, model.predict(X_np_with_const), color='red', label=f'Regression Line\nR²={r_squared:.2f}')
+            plt.title(f'Relationship between {predictor} and {dependent_var}\nCoefficient: {coef:.2f}')
+            plt.xlabel(f'Normalized {predictor}')
+            plt.ylabel(f'Normalized {dependent_var}')
+            plt.legend()
+            plt.grid(True)
+            plt.show()
 
     # Creating a DataFrame to display the results
     results_df = pd.DataFrame(results)
     return results_df
-
 
 
 
@@ -83,7 +103,7 @@ df_simplified = relevant_metrics_data(df_renamed)
 max_year_poverty_by_country = max_recent_yr(df_simplified)
 in_range_countries = filter_in_window_of_interest(df_simplified)
 
-regression_table = analyze_poverty_relationship(in_range_countries)
+regression_table = analyze_poverty_relationship_and_plot(in_range_countries)
 regression_table = regression_table[regression_table["R-squared"] > 0.3]
 
 print(regression_table)
