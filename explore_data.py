@@ -42,4 +42,3 @@ print(completion)
 # completion by country 
 completion_by_country = df_raw.groupby('country')[['Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)']].apply(lambda x: (1 - x.isnull().mean()) * 100)
 print(completion_by_country[completion_by_country["Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)"]>50])
-

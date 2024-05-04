@@ -56,3 +56,12 @@ def rename_raw_data(raw_data_filepath = "data/data_manager.csv", indicator_ids_f
     code_to_metric = dict(zip(df_indicator_filtered['indicator_id'], df_indicator_filtered['indicator']))
     df_raw.rename(columns=code_to_metric, inplace=True)
     return(df_raw)
+
+# llooking only at the most recent data for each country 
+def max_recent_yr(df, min_yr = 2015):
+    df = df[df['poverty'].notnull()]
+    df = df[df["date"] >= min_yr]
+    df = df.groupby('country').apply(lambda x: x.loc[x['date'].idxmax()])
+    df.reset_index(drop=True, inplace=True)
+    return(df)
+

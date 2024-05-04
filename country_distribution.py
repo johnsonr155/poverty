@@ -4,7 +4,7 @@ import matplotlib.ticker as ticker
 from matplotlib.ticker import FuncFormatter
 import matplotlib as mpl
 
-from process_data import rename_raw_data
+from process_data import rename_raw_data, max_recent_yr
 
 
 # select columns we're interested in for looking at disrribution
@@ -19,18 +19,10 @@ def simplify_data(df):
     df.rename(columns=shortened_metric, inplace=True)
     return(df)
 
-# llooking only at the most recent data for each country 
-def max_recent_yr(df, min_yr = 2010):
-    df = df[df['poverty'].notnull()]
-    df = df[df["date"] >= min_yr]
-    df = df.groupby('country').apply(lambda x: x.loc[x['date'].idxmax()])
-    df.reset_index(drop=True, inplace=True)
-    return(df)
-
 
 df_renamed = rename_raw_data()
-df_recent_yr = simplify_data(df_renamed)
-max_year_poverty_by_country = max_recent_yr(df_recent_yr)
+df_simplified = simplify_data(df_renamed)
+max_year_poverty_by_country = max_recent_yr(df_simplified)
 
 
 # Plot bubble chart
