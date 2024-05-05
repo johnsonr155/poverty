@@ -61,15 +61,15 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 
     results = []
     # Perform regression for each predictor
     for predictor in predictors:
-        # Prepare the data by dropping NaNs only in relevant columns
+        # clean the data by dropping NaNs in relevant columns
         subset = df[[predictor, dependent_var]].dropna()
 
         # Normalize the predictor and dependent variable for the regression model
         norm_predictor = (subset[predictor] - subset[predictor].mean()) / subset[predictor].std()
         norm_dependent_var = (subset[dependent_var] - subset[dependent_var].mean()) / subset[dependent_var].std()
         
-        # Convert to numpy arrays for regression
-        X = sm.add_constant(norm_predictor.values.reshape(-1, 1))  # Adding constant for intercept
+        # Convert to numpy arrays for regression and add constant for intercept
+        X = sm.add_constant(norm_predictor.values.reshape(-1, 1))  
         y = norm_dependent_var.values
         
         # Fit the regression model
@@ -85,14 +85,14 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 
             'P-Value': model.pvalues[1]
         })
 
-        # Plot if R-squared > 0.3 using actual values
+        # Plot if R-squared > above threshold using actual values
         if r_squared > min_r2:
             # Actual data for plotting
             actual_x = subset[predictor].values
             actual_y = subset[dependent_var].values
             predicted_y = subset[dependent_var].mean() + model.predict(X) * subset[dependent_var].std()
-            mpl.rcParams.update({'font.size': 14})
 
+            mpl.rcParams.update({'font.size': 14})
             fig = plt.figure(figsize=(8, 5))
             plt.scatter(actual_x, actual_y, color='#008080', label='Countries in corridor (1990-)')
             plt.plot(actual_x, predicted_y, color='#836953', label=f'Regression Line\nR²={r_squared:.2f}')
@@ -106,7 +106,7 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 
             fig.savefig(f'figs/{predictor} vs. Poverty.png', dpi=fig.dpi)
 
 
-    # Creating a DataFrame to display the results
+    # Creating df to display the results
     results_df = pd.DataFrame(results)
     return results_df
 

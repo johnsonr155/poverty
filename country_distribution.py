@@ -1,4 +1,3 @@
-import pandas as pd 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.ticker import FuncFormatter
@@ -21,8 +20,6 @@ def simplify_data(df):
     return(df)
 
 
-# Plot bubble chart
-# Customize axis tick labels 
 def percent_formatter(x, pos):
     return f"{x:.0f}%"
 
@@ -31,9 +28,7 @@ def dollar_thousand_formatter(x, pos):
 
 def make_bubble_chart(df, gdp_range=GDP_RANGE):
     mpl.rcParams.update({'font.size': 14})
-
     fig = plt.figure(figsize=(7, 6))
-
     plt.scatter(df['GDP per capita'], df['poverty'], s=df['population'] / 1e6, alpha=0.5)
     plt.xscale('log')
     plt.gca().xaxis.set_major_formatter(ticker.ScalarFormatter())
@@ -41,11 +36,9 @@ def make_bubble_chart(df, gdp_range=GDP_RANGE):
     plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
     plt.axvspan(gdp_range[0], gdp_range[1], color='green', alpha=0.1)
     plt.text(1500, plt.ylim()[1]*0.9, 'Corridor of Variation', fontsize=10, ha='center')
-    # Set labels and title
     plt.xlabel('GDP per capita')
     plt.ylabel('Percentage in poverty')
     plt.title('Poverty vs. GDP per Capita')
-    # Show plot
     plt.grid(True)
     plt.show()
     fig.savefig('figs/distr_bubble.png', dpi=fig.dpi)
@@ -62,13 +55,11 @@ def make_focus_plot(df, gdp_range=GDP_RANGE):
     plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
     plt.xlim(gdp_range[0]-500, gdp_range[1]+500)
     plt.ylim(0, 70)
-    # Set labels and title
     plt.xlabel('GDP per capita')
     plt.ylabel('Percentage in poverty')
     plt.title('Corridor of Variation: Poverty vs. GDP per Capita')
     for i, row in df.iterrows():
         plt.annotate(row['country'], (row['GDP per capita'], row['poverty']), textcoords="offset points", xytext=(5,5), ha='left', fontsize=11)
-    # Show plot
     plt.grid(True)
     plt.show()
     fig.savefig('figs/distr_bubble_corridor.png', dpi=fig.dpi)

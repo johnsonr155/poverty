@@ -2,6 +2,9 @@
 
 ## Overview
 This repo  explores factors contributing to poverty across various countries. It tries to identify factors causing poverty and looks at past trajectories of poverty for different countries as a means for thinking about the future
+
+This repo is a WIP and needs further refactoring
+
 ## Features
 - **Data Processing**: Functions for reading in the raw data and doing some processing
 - **Exploratory Data Analysis**: very rough script used for inital scoping analysis

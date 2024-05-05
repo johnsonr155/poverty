@@ -34,11 +34,12 @@ fig.savefig('figs/Uganda_past.png', dpi=fig.dpi)
 plt.show()
 
 def interpolate_and_mark(df):
+    """function to interpolate between values for poverty and gdp per capita"""
     df = df.reset_index(drop=True)
 
-    # Define a helper function to interpolate and mark within each group
+    # Define function to interpolate and mark within each group
     def group_interpolate_and_mark(group):
-        # Detect original NaNs for poverty and GDP
+        # Detect original NaNs for poverty and GDP - keep track of which values are interpolated and which were original
         poverty_nan_mask = group['poverty'].isna()
         gdp_nan_mask = group['GDP per capita (current US$)'].isna()
 
@@ -51,12 +52,13 @@ def interpolate_and_mark(df):
         group['GDP_interpolated'] = ((gdp_nan_mask & group['GDP per capita (current US$)'].notna())*1).astype(int)
         return group
 
-    # Apply the interpolation and marking to each group based on 'country'
+    # Apply the interpolation and marking to each group based on country
     df = df.groupby('country').apply(group_interpolate_and_mark)
     df = df.reset_index(drop=True)
     return(df)
 
 def clean_data_for_trajectory_analysis(df):
+    """function to clean, simplify and interpolate data"""
     shortened_metric = {
         "Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)":"poverty"
     }
@@ -83,11 +85,12 @@ def countries_of_interest(df, gdp_range = GDP_RANGE, poverty_range=POVERTY_START
 
 
 # plotting countries to compare to Uganda's past
-def find_trajectories(df, countries, end_poverty_level = 42):
+def find_trajectories(df, countries, start_poverty_level = 42):
+    """function that finds creates dataframe of trajectories based on a year 0 corresponding to the starting poverty level"""
     # Filter to include only the chosen countries
     df = df[df['country'].isin(countries)]
     # find year when trajectory passes closest to the chosen poverty level
-    df['poverty_difference'] = abs(df['poverty'] - end_poverty_level)
+    df['poverty_difference'] = abs(df['poverty'] - start_poverty_level)
     df.dropna(subset=['country', 'date', "poverty_difference"], inplace=True)
     # Find the year with the minimum absolute difference for each country
     min_poverty_indices = df.groupby('country')['poverty_difference'].idxmin()
@@ -101,7 +104,8 @@ def find_trajectories(df, countries, end_poverty_level = 42):
     return(df)
 
 
-def gbtm(df):
+def gbtm(df, number_of_groups=3):
+    """function to perform and plot group based trajectory modelling on countries in the same starting point as uganda"""
     df = df[df["years_passed"]>=0]
     df = df[df["years_passed"]<=10]
 
@@ -123,7 +127,7 @@ def gbtm(df):
 
     # Fit a Gaussian Mixture Model
     # The number of trajectories you hypothesize
-    n_clusters = 3
+    n_clusters = number_of_groups
     gmm = GaussianMixture(n_components=n_clusters, random_state=0)
     gmm.fit(scaled_data)
 

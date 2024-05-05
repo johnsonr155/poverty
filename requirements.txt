@@ -1,6 +1,5 @@
 numpy
 matplotlib
 pandas
-black
-isort
-requests
+statsmodels
+sklearn
