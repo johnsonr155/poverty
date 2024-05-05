@@ -6,7 +6,7 @@ import matplotlib as mpl
 
 from process_data import rename_raw_data, max_recent_yr
 
-GDP_RANGE = [500, 2000]
+GDP_RANGE = [740, 2000]
 
 # select columns we're interested in for looking at disrribution
 def simplify_data(df):
@@ -32,7 +32,7 @@ def dollar_thousand_formatter(x, pos):
 def make_bubble_chart(df, gdp_range=GDP_RANGE):
     mpl.rcParams.update({'font.size': 14})
 
-    plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(7, 6))
 
     plt.scatter(df['GDP per capita'], df['poverty'], s=df['population'] / 1e6, alpha=0.5)
     plt.xscale('log')
@@ -48,11 +48,13 @@ def make_bubble_chart(df, gdp_range=GDP_RANGE):
     # Show plot
     plt.grid(True)
     plt.show()
+    fig.savefig('figs/distr_bubble.png', dpi=fig.dpi)
+
 
 # focus plot
 def make_focus_plot(df, gdp_range=GDP_RANGE):
     df = df[(df['GDP per capita'] > gdp_range[0]) & (df['GDP per capita'] < gdp_range[1])]
-    plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(7, 6))
     plt.scatter(df['GDP per capita'], df['poverty'], s=df['population'] / 1e5, alpha=0.5)
     plt.axvspan(gdp_range[0], gdp_range[1], color='green', alpha=0.1)
     plt.gca().xaxis.set_major_formatter(ticker.ScalarFormatter())
@@ -69,6 +71,8 @@ def make_focus_plot(df, gdp_range=GDP_RANGE):
     # Show plot
     plt.grid(True)
     plt.show()
+    fig.savefig('figs/distr_bubble_corridor.png', dpi=fig.dpi)
+
 
 
 df_renamed = rename_raw_data()

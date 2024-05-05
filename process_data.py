@@ -33,6 +33,7 @@ EXLCUDED_REGIONS = [
     "Sub-Saharan Africa (excluding high income)",
     "Sub-Saharan Africa",
     "Small states",
+    "South Asia",
     "East Asia & Pacific (IDA & IBRD countries)",
     "Europe & Central Asia (IDA & IBRD countries)",
     "Latin America & the Caribbean (IDA & IBRD countries)",

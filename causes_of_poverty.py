@@ -11,28 +11,34 @@ from process_data import rename_raw_data, max_recent_yr
 GDP_RANGE = [750, 2000]
 
 VARS_OF_INTEREST = [
-    "Foreign direct investment, net inflows (BoP, current US$)",
-    "Net official development assistance received (current US$)",
     "Access to electricity (% of population)",
+    "Age dependency ratio (% of working-age population)",
     "Inflation, consumer prices (annual %)",
+    "CO2 emissions (metric tons per capita)",
     "Individuals using the Internet (% of population)",
-    "Armed forces personnel, total",
     "Agriculture, forestry, and fishing, value added (% of GDP)",
     "Manufacturing, value added (% of GDP)",
     "Services, value added (% of GDP)",
+    "Mortality rate, infant (per 1,000 live births)",
     "School enrollment, primary and secondary (gross), gender parity index (GPI)",
     "Unemployment, total (% of total labor force) (modeled ILO estimate)",
-    "Refugee population by country or territory of origin",
     "Life expectancy at birth, total (years)",
     "Fertility rate, total (births per woman)",
     "Urban population (% of total population)",
-    "GDP per capita (current US$)"
+    "GDP per capita (current US$)",
+    "Ores and metals exports (% of merchandise exports)"
 ]
 
+VARS_TO_ADJUST_PER_POP = [
+    "Armed forces personnel, total",
+    "Foreign direct investment, net inflows (BoP, current US$)",
+    "Net official development assistance received (current US$)"
+]
 
 def relevant_metrics_data(df):
     #select relevant cols
-    df = df[["country", "date", "Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)"]+ VARS_OF_INTEREST]
+    df = df[["country", "date", "Population, total", "Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)"]+ VARS_OF_INTEREST + VARS_TO_ADJUST_PER_POP]
+    df[VARS_TO_ADJUST_PER_POP] =  df[VARS_TO_ADJUST_PER_POP].div(df['Population, total'], axis=0)
     shortened_metric = {
         "Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)":"poverty"
     }
@@ -46,7 +52,7 @@ def filter_in_window_of_interest(df, gdp_range=GDP_RANGE):
 def percent_formatter(x, pos):
     return f"{x:.0f}%"
 
-def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 0.2):
+def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 0.01):
     # Replace infinities with NaN
     df = df.replace([np.inf, -np.inf], np.nan)
     
@@ -86,17 +92,20 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 
             actual_x = subset[predictor].values
             actual_y = subset[dependent_var].values
             predicted_y = subset[dependent_var].mean() + model.predict(X) * subset[dependent_var].std()
+            mpl.rcParams.update({'font.size': 14})
 
-            plt.figure(figsize=(10, 6))
+            fig = plt.figure(figsize=(8, 5))
             plt.scatter(actual_x, actual_y, color='#008080', label='Countries in corridor (1990-)')
             plt.plot(actual_x, predicted_y, color='#836953', label=f'Regression Line\nR²={r_squared:.2f}')
-            plt.title(f'Relationship between {predictor} and {dependent_var}')
+            plt.title(f'{predictor} vs. Poverty')
             plt.xlabel(f'{predictor}')
             plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
             plt.ylabel(f'{dependent_var}')
             plt.legend()
             plt.grid(True)
             plt.show()
+            fig.savefig(f'figs/{predictor} vs. Poverty.png', dpi=fig.dpi)
+
 
     # Creating a DataFrame to display the results
     results_df = pd.DataFrame(results)
