@@ -5,6 +5,8 @@ This repo  explores factors contributing to poverty across various countries. It
 
 This repo is a WIP and needs further refactoring
 
+Contact Robert Johnson at robertjohnson401@gmail.com if you have any queries or notice any bugs.
+
 ## Features
 - **Data Processing**: Functions for reading in the raw data and doing some processing
 - **Exploratory Data Analysis**: very rough script used for inital scoping analysis
