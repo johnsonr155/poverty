@@ -4,11 +4,14 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib as mpl
+from process_data import read_and_rename_raw_data, max_recent_yr
 
-from process_data import rename_raw_data, max_recent_yr
+
+# ----- Script for exploring factors (through linear regression) that cause poverty within the GDP corridor ---
 
 GDP_RANGE = [750, 2000]
 
+# variables chosen to explore
 VARS_OF_INTEREST = [
     "Access to electricity (% of population)",
     "Age dependency ratio (% of working-age population)",
@@ -28,6 +31,7 @@ VARS_OF_INTEREST = [
     "Ores and metals exports (% of merchandise exports)"
 ]
 
+# vairables that need to be adjuster for population of the country
 VARS_TO_ADJUST_PER_POP = [
     "Armed forces personnel, total",
     "Foreign direct investment, net inflows (BoP, current US$)",
@@ -35,7 +39,7 @@ VARS_TO_ADJUST_PER_POP = [
 ]
 
 def relevant_metrics_data(df):
-    #select relevant cols
+    """function to select relevant variables for analysis and adjust for population where needed"""
     df = df[["country", "date", "Population, total", "Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)"]+ VARS_OF_INTEREST + VARS_TO_ADJUST_PER_POP]
     df[VARS_TO_ADJUST_PER_POP] =  df[VARS_TO_ADJUST_PER_POP].div(df['Population, total'], axis=0)
     shortened_metric = {
@@ -44,17 +48,18 @@ def relevant_metrics_data(df):
     df.rename(columns=shortened_metric, inplace=True)
     return(df)
 
-def filter_in_window_of_interest(df, gdp_range=GDP_RANGE):
+def filter_in_corridor_of_interest(df, gdp_range=GDP_RANGE):
+    """function to look only at countries within our corridor of interest"""
     df = df[(df['GDP per capita (current US$)'] > gdp_range[0]) & (df['GDP per capita (current US$)'] < gdp_range[1])]
     return(df)
 
 def percent_formatter(x, pos):
     return f"{x:.0f}%"
 
-def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 0.01):
+def analyse_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 0.01):
     # Replace infinities with NaN
     df = df.replace([np.inf, -np.inf], np.nan)
-    
+
     # Specifying predictors excluding 'country' and dependent variable
     predictors = [col for col in df.columns if col not in ['country', dependent_var]]
     
@@ -85,7 +90,7 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 
             'P-Value': model.pvalues[1]
         })
 
-        # Plot if R-squared > above threshold using actual values
+        # Plot if R-squared > above threshold using actual rather than normalised values
         if r_squared > min_r2:
             # Actual data for plotting
             actual_x = subset[predictor].values
@@ -111,12 +116,12 @@ def analyze_poverty_relationship_and_plot(df, dependent_var='poverty', min_r2 = 
     return results_df
 
 
-df_renamed = rename_raw_data()
+df_renamed = read_and_rename_raw_data()
 df_simplified = relevant_metrics_data(df_renamed)
 max_year_poverty_by_country = max_recent_yr(df_simplified)
-in_range_countries = filter_in_window_of_interest(df_simplified)
+in_range_countries = filter_in_corridor_of_interest(df_simplified)
 
-regression_table = analyze_poverty_relationship_and_plot(in_range_countries)
+regression_table = analyse_poverty_relationship_and_plot(in_range_countries)
 regression_table = regression_table[regression_table["R-squared"] > 0.2]
 
 print(regression_table)

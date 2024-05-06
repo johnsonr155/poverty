@@ -9,10 +9,10 @@ Contact Robert Johnson at robertjohnson401@gmail.com if you have any queries or 
 
 ## Features
 - **Data Processing**: Functions for reading in the raw data and doing some processing
-- **Exploratory Data Analysis**: very rough script used for inital scoping analysis
+- **Exploratory Data Analysis**: very rough script used for inital scoping and completion of fields
 - **Poverty Distribution Analysis**: Investigates the distribution of poverty and the relationship with gdp per capita
-- **Predictor Analysis**: Regression analyssi of variables that could contribute to poverty levels. (Based on countries within a narrow range of GDP per capita)
-- **Group Based Trajectory Modeling**: Uses a GBTM to cluster histroic poverty trajectories with a view to thinking about possible futures
+- **Predictor Analysis**: Regression analysis of variables that could contribute to poverty levels. (Based on countries within a narrow range of GDP per capita)
+- **Group Based Trajectory Modeling**: Uses a GBTM to cluster historic poverty trajectories with a view to thinking about possible future forecasts
 
 
 ### Prerequisites

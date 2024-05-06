@@ -2,12 +2,15 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.ticker import FuncFormatter
 import matplotlib as mpl
+from process_data import read_and_rename_raw_data, max_recent_yr
 
-from process_data import rename_raw_data, max_recent_yr
 
-GDP_RANGE = [740, 2000]
+# ----- Script for plotting distribution of countries poverty in relation to GDP per Capita ----
 
-# select columns we're interested in for looking at disrribution
+# the corridor of variation
+GDP_RANGE = [750, 2000]
+
+# select columns we're interested in for looking at distribution
 def simplify_data(df):
     #rename cols
     df = df[["country", "date", "Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)", "GDP per capita (current US$)", "Population, total"]]
@@ -66,7 +69,7 @@ def make_focus_plot(df, gdp_range=GDP_RANGE):
 
 
 
-df_renamed = rename_raw_data()
+df_renamed = read_and_rename_raw_data()
 df_simplified = simplify_data(df_renamed)
 max_year_poverty_by_country = max_recent_yr(df_simplified)
 

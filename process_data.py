@@ -1,5 +1,6 @@
 import pandas as pd
 
+# We are only interested in individual countries not regions
 EXLCUDED_REGIONS = [
     "Africa Western and Central",
     "Africa Eastern and Southern",
@@ -47,19 +48,21 @@ EXLCUDED_REGIONS = [
     "Upper middle income",
     "Not classified"] 
 
-def rename_raw_data(raw_data_filepath = "data/data_manager.csv", indicator_ids_filepath = "data/indicator_ids.csv"):
-    #read in data
+def read_and_rename_raw_data(raw_data_filepath = "data/data_manager.csv", indicator_ids_filepath = "data/indicator_ids.csv"):
+    """function to read in raw data, remove regions and rename indicator codes with their actual descriptions for easier interpretation"""
+    # read in raw fata
     df_raw = pd.read_csv(raw_data_filepath)
     df_indicator = pd.read_csv(indicator_ids_filepath)
+    # exlcude regions from dataset
     df_raw = df_raw[~df_raw['country'].isin(EXLCUDED_REGIONS)]
-    #rename columns
+    # rename columns
     indicator_codes = set(df_raw.columns)
     df_indicator_filtered = df_indicator[df_indicator['indicator_id'].isin(indicator_codes)]
     code_to_metric = dict(zip(df_indicator_filtered['indicator_id'], df_indicator_filtered['indicator']))
     df_raw.rename(columns=code_to_metric, inplace=True)
     return(df_raw)
 
-# llooking only at the most recent data for each country 
+# looking only at the most recent poverty data for each country 
 def max_recent_yr(df, min_yr = 2015):
     df = df[df['poverty'].notnull()]
     df = df[df["date"] >= min_yr]

@@ -6,39 +6,54 @@ from matplotlib.ticker import FuncFormatter
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.patches as mpatches
+import matplotlib as mpl
+from process_data import read_and_rename_raw_data
 
-from process_data import rename_raw_data
+# ----- Script for looking at individual country: and exploring its future poverty using GBTM of other countries in the past
+# ************ Needs refactoring to work for general case of any country - currently hard coded for Uganda *****************
 
-df_renamed = rename_raw_data()
+df_renamed = read_and_rename_raw_data()
 
+
+# Quick look at Uganda
 df_uganda = df_renamed[df_renamed["country"]=="Uganda"]
 df_uganda = df_uganda[["country", "date", "Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)", "GDP per capita (current US$)"]]
 df_uganda = df_uganda.dropna()
 
 print(df_uganda[df_uganda["date"]==2019])
 
-
 GDP_RANGE = [750, 2000]
+
+# Uganda's most recent poverty is 42% so looking either side
 POVERTY_STARTING_POINT_RANGE=[37, 47]
 
 def percent_formatter(x, pos):
     return f"{x:.0f}%"
 
+# plotting Uganda's poverty trajectory to date
 fig = plt.figure(figsize=(6, 2))
 plt.plot(df_uganda['date'].values, df_uganda["Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)"].values, color='#008080')
 plt.title('Uganda: Poverty trajectory to date')
 plt.ylabel('Poverty')
 plt.ylim(35, 80)
+plt.xlim(1992, 2020)
+plt.axvspan(1990, 2002, color='#800000', alpha=0.1)
+plt.text(1995, plt.ylim()[1]*0.9, 'Phase 1', fontsize=10, ha='left')
+plt.axvspan(2002, 2012, color='#008080', alpha=0.1)
+plt.text(2005, plt.ylim()[1]*0.9, 'Phase 2', fontsize=10, ha='left')
+plt.axvspan(2012, 2020, color='#800000', alpha=0.1)
+plt.text(2013, plt.ylim()[1]*0.9, 'Phase 3', fontsize=10, ha='left')
 plt.gca().yaxis.set_major_formatter(FuncFormatter(percent_formatter))
 fig.savefig('figs/Uganda_past.png', dpi=fig.dpi)
 plt.show()
 
+
 def interpolate_and_mark(df):
     """function to interpolate between values for poverty and gdp per capita"""
     df = df.reset_index(drop=True)
-
     # Define function to interpolate and mark within each group
     def group_interpolate_and_mark(group):
+
         # Detect original NaNs for poverty and GDP - keep track of which values are interpolated and which were original
         poverty_nan_mask = group['poverty'].isna()
         gdp_nan_mask = group['GDP per capita (current US$)'].isna()
@@ -84,7 +99,7 @@ def countries_of_interest(df, gdp_range = GDP_RANGE, poverty_range=POVERTY_START
     return(df["country"].unique())
 
 
-# plotting countries to compare to Uganda's past
+# Extracting the historic trajectories for chosen countries 
 def find_trajectories(df, countries, start_poverty_level = 42):
     """function that finds creates dataframe of trajectories based on a year 0 corresponding to the starting poverty level"""
     # Filter to include only the chosen countries
@@ -125,8 +140,8 @@ def gbtm(df, number_of_groups=3):
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(pivot_data)
 
-    # Fit a Gaussian Mixture Model
-    # The number of trajectories you hypothesize
+    # Fit a gaussian mixture model
+    # The number of clusters or groups can be adjusted
     n_clusters = number_of_groups
     gmm = GaussianMixture(n_components=n_clusters, random_state=0)
     gmm.fit(scaled_data)
@@ -134,16 +149,17 @@ def gbtm(df, number_of_groups=3):
     # Predict the cluster for each country
     clusters = gmm.predict(scaled_data)
 
-    # Add the cluster labels to the DataFrame
+    # Add the cluster labels to the dataframe
     pivot_data['Cluster'] = clusters
 
     original_data = scaler.inverse_transform(scaled_data)
     original_data_df = pd.DataFrame(original_data, index=pivot_data.index, columns=pivot_data.columns[:-1])
 
-    # Add cluster information back to the DataFrame with original data
+    # Add cluster information back to the dataframe with original data
     original_data_df['Cluster'] = clusters
     palette = ["#CC7722", "#800000", "#008080"]
     # Set up the plot
+    mpl.rcParams.update({'font.size': 14})
     fig = plt.figure(figsize=(8, 5))
     
     # Plot each country's poverty trajectory
@@ -152,12 +168,13 @@ def gbtm(df, number_of_groups=3):
         plt.plot(row.index[:-1].values, row.values[:-1], linewidth=40, color=palette[int(row["Cluster"])], alpha=0.2, label='_nolegend_')
         plt.text(row.index[-2], row.values[-2], index, fontsize=9, va='center', ha='left')
     
-    # Enhance the plot
-    plt.title('Trajectories starting from ~40% in poverty')
+    # improve the plot
+    plt.title('Past trajectories starting from ~40% in poverty')
     plt.xlabel('Years Passed')
     plt.ylabel('Poverty')
     plt.legend(title='Cluster', bbox_to_anchor=(1.05, 1), loc='upper left')
     sns.despine()
+    # Define memorable names for each cluster
     patch1 = mpatches.Patch(color='#800000', label='Stuck in a rut')
     patch2 = mpatches.Patch(color='#CC7722', label='Steady progress')
     patch3 = mpatches.Patch(color='#008080', label='Economic miracle')
@@ -170,7 +187,7 @@ def gbtm(df, number_of_groups=3):
     return(pivot_data)
 
 
-df_renamed = rename_raw_data()
+df_renamed = read_and_rename_raw_data()
 df_clean = clean_data_for_trajectory_analysis(df_renamed)
 
 chosen_countries = countries_of_interest(df_clean)
